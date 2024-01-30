@@ -12,7 +12,8 @@ clear goods
 %Data now doesn't include the T. sacculifer column because method does not
 %rely on that species d18O
 
-%Remove rows that has ________
+%Cores VM28-227 and VM28-229 excluded due to questionable d18O
+%stratigraphy, see Karim Lakhani's Thesis, chapter 3.2.1
 latitudes=[-8.4,-10.667];
 for i=1:2
     row=good_data(:,1)==latitudes(i);
