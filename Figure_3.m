@@ -105,8 +105,13 @@ y=polyval(p,x);
 plot(x,y)
 xlabel('Climatology 20°C isotherm')
 ylabel(strcat('Depth where \delta^{18}O = ',(num2str(round(d18O_Z20,2)))))
-ccorr=corrcoef(Z20,model_Z20_equivalent);
-title(strcat('Correlation: ',num2str(round(ccorr(1,2),2))))
+[ccorr,P]=corrcoef(Z20,model_Z20_equivalent);
+P=P(1,2);
+if P<0.0001
+    title(strcat('Correlation: ',num2str(round(ccorr(1,2),2)),"  P-value: <0.0001"))
+else
+    title(strcat('Correlation: ',num2str(round(ccorr(1,2),2)),"  P-value: ",num2str(round(P,4))))
+end
 axis([0,250,0,250])
 plot([0,250],[0,250],'--k')
 
@@ -119,7 +124,12 @@ y=polyval(p,x);
 plot(x,y)
 xlabel('TP=0.8 depth (m)')
 ylabel('TP=0.8 depth from regression (m)')
-ccorr=corrcoef(TP80,model_TP80);
-title(strcat('Correlation: ',num2str(round(ccorr(1,2),2))))
+[ccorr,P]=corrcoef(TP80,model_TP80);
+P=P(1,2);
+if P<0.0001
+    title(strcat('Correlation: ',num2str(round(ccorr(1,2),2)),"  P-value: <0.0001"))
+else
+    title(strcat('Correlation: ',num2str(round(ccorr(1,2),2)),"  P-value: ",num2str(round(P,4))))
+end
 axis([0,250,0,250])
 plot([0,250],[0,250],'--k')

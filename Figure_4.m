@@ -29,11 +29,16 @@ for i=1:3
     [p,S]=polyfit(Z20,Rub-good_data(:,i+3),1);
     y=polyval(p,x);
     plot(x,y)
-    ccorr=corrcoef(Z20,Rub-good_data(:,i+3));
+    [ccorr,P]=corrcoef(Z20,Rub-good_data(:,i+3));
+    P=P(1,2);
     correl(i)=ccorr(1,2);
     xlabel('Climatology 20°C isotherm')
     ylabel(names{i})
-    title(strcat('Correlation: ',num2str(round(correl(i),2))))
+    if p<0.0001
+        title(strcat('Correlation: ',num2str(round(correl(i),2)),"  P-value: <0.0001")) 
+    else
+        title(strcat('Correlation: ',num2str(round(correl(i),2)),"  P-value: ",num2str(round(P,4)))) 
+    end
 end
 
 subplot(2,2,4)
@@ -45,6 +50,11 @@ y=polyval(p,x);
 plot(x,y)
 xlabel('Climatology 20°C isotherm')
 ylabel('{\it G. ruber} - Subsurface mean  \delta^{18}O_c(‰)')
-ccorr=corrcoef(Z20,Rub-mean(good_data(:,[4,5,6]),2));
-title(strcat('Correlation: ',num2str(round(ccorr(1,2),2))))
+[ccorr,P]=corrcoef(Z20,Rub-mean(good_data(:,[4,5,6]),2));
+P=P(1,2);
+if p<0.0001
+    title(strcat('Correlation: ',num2str(round(correl(i),2)),"  P-value: <0.0001")) 
+else
+    title(strcat('Correlation: ',num2str(round(correl(i),2)),"  P-value: ",num2str(round(P,4)))) 
+end
 axis([0,250,ylim])
