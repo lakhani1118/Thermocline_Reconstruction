@@ -54,16 +54,21 @@ d18Os=good_data(:,[3:end]);
 cax=[min(d18Os(:)),max(d18Os(:))];
 
 figure('Position',[0,-114.2,955.2,840])
+[~,I1]=min(abs(lonvec-130));
+[~,I2]=min(abs(lonvec-290));
+[~,I3]=min(abs(latvec--20));
+[~,I4]=min(abs(latvec-20));
+levels=linspace(min(cax),max(cax),9);
 for i=1:4 %Loop to plot all species data into separate subplots
     subplot(3,2,i)
     hold on
     world_coastp
-    contourf(cycleLon,cycleLat,squeeze(background(i,:,:)))
+    contourf(cycleLon(I1:I2,I3:I4),cycleLat(I1:I2,I3:I4),squeeze(background(i,I1:I2,I3:I4)),levels)
     scatter(good_data(:,2),good_data(:,1),55,d18Os(:,i),'filled','MarkerEdgeColor','k')
     axis([130,290,-20,20])
-    if i==1
-        colorbar
-    end
+%     if i==1
+%         colorbar
+%     end
     colormap(colorblind_jet)
     caxis(cax)
     title(it_list{i},'FontSize',16)
@@ -72,6 +77,7 @@ for i=1:4 %Loop to plot all species data into separate subplots
     yticks([-15,0,15]);
     yticklabels({'15\circS','0\circ','15\circN'});
 end
+
 %% Section e data loading
 load('d18O_paper.mat') 
 %d18O field based on WOA Temp climatology and Legrande and Schmidt 2006 d18Osw climatology
