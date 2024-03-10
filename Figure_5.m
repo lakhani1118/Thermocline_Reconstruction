@@ -1,59 +1,140 @@
-%% Individual species minus benthic
-addpath('Functions/')
-addpath('Data/')
-load('Data/Z20.mat','good_data','Z20')
+addpath('Functions')
+addpath('Data')
+load('Z20.mat')
+good_data(:,4)=good_data(:,4)*nan; %Remove T. sacculifer from code
+ODP849=find(good_data(:,1)==0.1830);
+ODP849=good_data(ODP849,:);
+%% Get profile for ODP849
+load('d18O_paper.mat')
+Lat=squeeze(X3(:,:,1));
+Lon=squeeze(Y3(:,:,1));
+depthvec=squeeze(Z3(1,1,:));
+[cycleLon,cycleLat,cycled18O]=cycle_data_3D(Lon,Lat,d18O1,30);
+latvec=cycleLat(1,:);
+latvec=latvec(:);
+lonvec=cycleLon(:,1);
+[~,I1]=min(abs(lonvec-ODP849(2)));
+[~,I2]=min(abs(latvec-ODP849(1)));
+true_climatology=squeeze(cycled18O(I1,I2,:));
+clear cycled18O cycleLat cycleLon d18O1 Lat Lon X3 Y3 Z3
+%% Holocene
+load('Depth_Distributions.mat')
 benthic_d18O=1.75;
+depths=[0,32,210,114,96,610];
+%Get average profile
+[beta,MLD]=run_thermocline_model3(depths,[ODP849(3:7),benthic_d18O]);
 
-%Remove rows that do not have species data
-goods=~any(isnan(good_data(:,[3,5,6,7])),2);
-good_data=good_data(goods,[1,2,3,5,6,7]);Z20=Z20(goods);
-clear goods
-
-%Cores VM28-227 and VM28-229 excluded due to questionable d18O
-%stratigraphy, see Karim Lakhani's Thesis, chapter 3.2.1
-latitudes=[-8.4,-10.667];
-for i=1:2
-    row=good_data(:,1)==latitudes(i);
-    good_data(row,:)=[];Z20(row)=[];
-end
-clear latitudes row i
-%%
-figure('Position',[0,-166.2,980,903.2])
-names={'{\it G. tumida} - benthic  \delta^{18}O_c (‰)','{\it N. dutertrei} - benthic  \delta^{18}O_c (‰)','{\it P. obliquiloculata} - benthic  \delta^{18}O_c (‰)'};
-for i=1:3
-    subplot(2,2,i)
-    hold on
-    scatter(Z20,good_data(:,i+3)-benthic_d18O,36,'HandleVisibility','off')
-    x=linspace(0,250,100);
-    [p,S]=polyfit(Z20,good_data(:,i+3)-benthic_d18O,1);
-    y=polyval(p,x);
-    plot(x,y)
-    [ccorr,P]=corrcoef(Z20,good_data(:,i+3)-benthic_d18O);
-    P=P(1,2);
-    correl(i)=ccorr(1,2);
-    xlabel('Climatology 20°C isotherm')
-    ylabel(names{i})
-    if P<0.0001
-        title(strcat('Correlation: ',num2str(round(ccorr(1,2),2)),"  P-value: <0.0001"))
-    else
-        title(strcat('Correlation: ',num2str(round(ccorr(1,2),2)),"  P-value: ",num2str(round(P,4))))
+depth_plot=linspace(0,610,1000);
+Hol_profile=depth_plot*nan;
+Hol_profile(depth_plot<MLD)=ODP849(3);
+log_func=@(depth,beta) -1*beta(1).^(-1.*(depth+beta(2)))+beta(3);
+Hol_profile(depth_plot>=MLD)=log_func(depth_plot(depth_plot>=MLD),beta);
+MC_num=500;
+MC_profiles=ones([MC_num,length(depth_plot)])*nan;
+%Get realizations of profile based on ACD error
+for i=1:MC_num
+    disp(i)
+    MC_depths=[0];
+    for j=2:5
+        MC_depths(j)=depth_realization(xi_tot(j,:),ksdens(j,:),minmax(j,1),minmax(j,2));
     end
+    MC_depths(6)=depths(end);
+    [MC_beta,MC_MLD]=run_thermocline_model3(MC_depths,[ODP849(3:7),benthic_d18O]);
+    MC_profiles(i,depth_plot<MC_MLD)=ODP849(3);
+    MC_profiles(i,depth_plot>=MC_MLD)=log_func(depth_plot(depth_plot>=MC_MLD),MC_beta);
 end
 
-subplot(2,2,4)
+%% Holocene Figure code
+col=[215/255,48/255,39/255];
+figure()
 hold on
-scatter(Z20,mean(good_data(:,[4,5,6]),2)-benthic_d18O)
-x=linspace(0,250,100);
-[p,S]=polyfit(Z20,mean(good_data(:,[4,5,6]),2)-benthic_d18O,1);
-y=polyval(p,x);
-plot(x,y)
-xlabel('Climatology 20°C isotherm')
-ylabel('Subsurface mean - benthic  \delta^{18}O_c(‰)')
-[ccorr,P]=corrcoef(Z20,mean(good_data(:,[4,5,6]),2)-benthic_d18O);
-P=P(1,2);
-if P<0.0001
-    title(strcat('Correlation: ',num2str(round(ccorr(1,2),2)),"  P-value: <0.0001"))
-else
-    title(strcat('Correlation: ',num2str(round(ccorr(1,2),2)),"  P-value: ",num2str(round(P,4))))
+plot([ODP849(3:7),benthic_d18O],depths(1:6),'ok','MarkerFaceColor',col)
+plot(Hol_profile,depth_plot,'-','LineWidth',1.5,'Color',col)
+plot(true_climatology(1:40),depthvec(1:40),'--k','LineWidth',1.5)
+
+for i=1:MC_num
+    plot(MC_profiles(i,:),depth_plot,'-','LineWidth',1.5,'Color',[col,5/(MC_num)])
 end
-axis([0,250,ylim])
+
+set(gca,'YDir','reverse')
+xlabel('\delta^{18}O_c')
+ylabel('Depth (m)')
+axis([-2,2,0,610])
+
+%% LGM
+load('Depth_Distributions.mat')
+LGMODP849=[ODP849(1:2),-0.07,0.22,1.44,1.33,0.79];
+LGMODP849(4)=nan;
+LGMbenthic=2.797;
+depths=[0,32,210,114,96,500];
+%Get average profile
+[beta,MLD]=run_thermocline_model3(depths,[LGMODP849(3:7),LGMbenthic]);
+
+depth_plot=linspace(0,610,1000);
+LGM_profile=depth_plot*nan;
+LGM_profile(depth_plot<MLD)=LGMODP849(3);
+log_func=@(depth,beta) -1*beta(1).^(-1.*(depth+beta(2)))+beta(3);
+LGM_profile(depth_plot>=MLD)=log_func(depth_plot(depth_plot>=MLD),beta);
+MC_num=500;
+LGM_MC_profiles=ones([MC_num,length(depth_plot)])*nan;
+%Get realizations of profile based on ACD error
+for i=1:MC_num
+    disp(i)
+    LGM_MC_depths=[0];
+    for j=2:5
+        LGM_MC_depths(j)=depth_realization(xi_tot(j,:),ksdens(j,:),minmax(j,1),minmax(j,2));
+    end
+    LGM_MC_depths(6)=depths(end);
+    [LGM_MC_beta,LGM_MC_MLD]=run_thermocline_model3(LGM_MC_depths,[LGMODP849(3:7),LGMbenthic]);
+    LGM_MC_profiles(i,depth_plot<LGM_MC_MLD)=LGMODP849(3);
+    LGM_MC_profiles(i,depth_plot>=LGM_MC_MLD)=log_func(depth_plot(depth_plot>=LGM_MC_MLD),LGM_MC_beta);
+end
+
+%%
+Tshift=0.21*-2.5; %Applied to Holocene climatology to plot it with LGM data and results
+col2=[69/255,117/255,180/255];
+figure()
+hold on
+plot([LGMODP849(3:7),LGMbenthic],depths(1:6),'ok','MarkerFaceColor',col2)
+plot(LGM_profile,depth_plot,'-','LineWidth',1.5,'Color',col2)
+plot(true_climatology(1:40)+1-Tshift,depthvec(1:40),'--k','LineWidth',1.5)
+
+for i=1:MC_num
+    plot(LGM_MC_profiles(i,:),depth_plot,'-','LineWidth',1.5,'Color',[col2,5/(MC_num)])
+end
+set(gca,'YDir','reverse')
+xlabel('\delta^{18}O_c')
+ylabel('Depth (m)')
+axis([-2+1-Tshift,2+1-Tshift,0,610])
+
+%% Combined figure
+figure()
+hold on
+%Plot Holocene results first
+plot([ODP849(3:7)],depths(1:5),'ok','MarkerFaceColor',col)
+plot(benthic_d18O,610,'ok','MarkerFaceColor',col)
+plot(Hol_profile,depth_plot,'-','LineWidth',1.5,'Color',col)
+
+plot(true_climatology(1:40),depthvec(1:40),'--k','LineWidth',1.5)
+
+for i=1:MC_num
+    plot(MC_profiles(i,:),depth_plot,'-','LineWidth',1.5,'Color',[col,5/(MC_num)])
+end
+
+set(gca,'YDir','reverse')
+xlabel('\delta^{18}O_c')
+ylabel('Depth (m)')
+
+%Plot LGM results
+Tshift=0.21*-2.5;
+plot([LGMODP849(3:7),LGMbenthic]-1+Tshift,depths(1:6),'ok','MarkerFaceColor',col2)
+plot(LGM_profile-1+Tshift,depth_plot,'-','LineWidth',1.5,'Color',col2)
+plot(true_climatology(1:40),depthvec(1:40),'--k','LineWidth',1.5)
+
+for i=1:MC_num
+    plot(LGM_MC_profiles(i,:)-1+Tshift,depth_plot,'-','LineWidth',1.5,'Color',[col2,5/(MC_num)])
+end
+set(gca,'YDir','reverse')
+xlabel('\delta^{18}O_c')
+ylabel('Depth (m)')
+axis([-2,2,0,610])
