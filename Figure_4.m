@@ -118,7 +118,7 @@ for k=1:length(good_data)
     end
 end
 
-%% Plot Figure 3
+%% Plot Figure 4
 figure()
 hold on
 yneg=abs(prctile(Z20_MC,2.5,2)-model_Z20_equivalent');
